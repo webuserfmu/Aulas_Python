@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod, abstractproperty
 from datetime import datetime
 import os
@@ -9,21 +10,21 @@ def get_next_transaction_id():
     _TRANSACTION_ID += 1
     return _TRANSACTION_ID
 
+def log_operacao_menu(operacao_nome: str):
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Operação: {operacao_nome}")
 
 def log_transacao(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # Executa a função original primeiro
         resultado = func(*args, **kwargs)
 
-        # Lógica de log baseada no tipo de função/retorno
-        if isinstance(args[0], Transacao): # Para Deposito e Saque (onde args[0] é a transacao)
+        if isinstance(args[0], Transacao):
             transacao = args[0]
-            conta = args[1] #  registrar(self, conta)
+            conta = args[1]
             tipo = type(transacao).__name__
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transação: {tipo} | ID: {transacao.id} | Valor: R${transacao.valor:.2f} | Conta: {conta.numero}")
-        elif func.__name__ == 'criar_conta' and resultado: # Para criação de conta
-            nova_conta = resultado 
+        elif func.__name__ == 'criar_conta' and resultado:
+            nova_conta = resultado
             cliente = nova_conta.cliente
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transação: Criação de Conta | Conta: {nova_conta.numero} | Cliente: {cliente.nome}")
         return resultado
@@ -48,7 +49,7 @@ class Transacao(ABC):
         pass
 
     @abstractmethod
-    @log_transacao 
+    @log_transacao
     def registrar(self, conta: 'Conta') -> bool:
         pass
 
@@ -120,7 +121,6 @@ class Historico:
             print(f"Tipo: {tipo:<8} | Valor: R${transacao.valor:7.2f} | Data: {transacao.data.strftime('%d/%m/%Y %H:%M:%S')}")
         print("---------------")
 
-    
     def transacoes_por_tipo(self, tipo_filtro: str = None):
         for transacao in self._transacoes:
             if tipo_filtro is None or type(transacao).__name__.lower() == tipo_filtro.lower():
@@ -261,7 +261,6 @@ class PessoaFisica(Cliente):
     def data_nascimento(self) -> str:
         return self._data_nascimento
 
-
 class ContasIterator:
     def __init__(self, contas: list[Conta]):
         self._contas = contas
@@ -274,14 +273,13 @@ class ContasIterator:
         if self._index < len(self._contas):
             conta = self._contas[self._index]
             self._index += 1
-            
             cpf_cliente = conta.cliente.cpf if isinstance(conta.cliente, PessoaFisica) else "N/A"
             return {
                 "numero": conta.numero,
                 "agencia": conta.agencia,
                 "saldo": conta.saldo,
                 "cliente_nome": conta.cliente.nome,
-                "cliente_cpf": cpf_cliente, 
+                "cliente_cpf": cpf_cliente,
                 "tipo_conta": type(conta).__name__
             }
         else:
@@ -298,7 +296,7 @@ def menu():
     print("[nc] Nova conta")
     print("[lc] Listar contas")
     print("[nu] Novo usuário")
-    print("[lt] Listar transações por tipo (gerador)") # Nova opção
+    print("[lt] Listar transações por tipo (gerador)")
     print("[q] Sair")
     print("="*46)
     return input("=> ").lower().strip()
@@ -316,6 +314,7 @@ def recuperar_conta_cliente(cliente: Cliente, numero_conta: int) -> Conta | None
     return None
 
 def cadastrar_usuario(clientes: list[PessoaFisica]):
+    log_operacao_menu("Cadastrar Usuário")
     print("\n--- Novo Usuário ---")
     cpf = input("Informe o CPF (somente números): ")
     cliente_existente = filtrar_cliente(cpf, clientes)
@@ -332,7 +331,7 @@ def cadastrar_usuario(clientes: list[PessoaFisica]):
     clientes.append(novo_cliente)
     print("\n>>> Usuário criado com sucesso!")
 
-@log_transacao 
+@log_transacao
 def criar_conta(clientes: list[PessoaFisica], contas: list[Conta]):
     print("\n--- Criar Nova Conta ---")
     cpf = input("Informe o CPF do cliente: ")
@@ -340,7 +339,7 @@ def criar_conta(clientes: list[PessoaFisica], contas: list[Conta]):
 
     if not cliente:
         print("\n!!! Erro: Cliente não encontrado, crie um novo usuário primeiro!")
-        return None 
+        return None
 
     novo_numero_conta = len(contas) + 1001
 
@@ -353,29 +352,28 @@ def criar_conta(clientes: list[PessoaFisica], contas: list[Conta]):
                                    limite_saques_diarios_cc=limite_saques_diarios_cc)
     except ValueError:
         print("\n!!! Erro: Valores de limite ou saques inválidos. Conta não criada.")
-        return None 
+        return None
 
     contas.append(nova_conta)
     cliente.adicionar_conta(nova_conta)
     print(f"\n>>> Conta {nova_conta.numero} (Conta Corrente) criada com sucesso para {cliente.nome}!")
-    return nova_conta 
+    return nova_conta
 
 
 def listar_contas(contas: list[Conta]):
+    log_operacao_menu("Listar Contas")
     print("\n--- Lista de Contas ---")
     if not contas:
         print("Nenhuma conta cadastrada.")
         return
 
-    
     for conta_info in ContasIterator(contas):
         print(f"\nAgência:\t{conta_info['agencia']}")
         print(f"Conta:\t\t{conta_info['numero']}")
         print(f"Tipo:\t\t{conta_info['tipo_conta']}")
         print(f"Titular:\t{conta_info['cliente_nome']}")
-        print(f"CPF:\t\t{conta_info['cliente_cpf']}") # Usando o CPF do iterador
-        print(f"Saldo:\t\tR${conta_info['saldo']:.2f}")
-        # Para o limite, acessamos diretamente a conta original pois não foi adicionado ao iterador para evitar complexidade desnecessária
+        print(f"CPF:\t\t{conta_info['cliente_cpf']}")
+        
         conta_original = next((c for c in contas if c.numero == conta_info['numero']), None)
         if isinstance(conta_original, ContaCorrente):
             print(f"Limite por Saque: R${conta_original.limite:.2f}")
@@ -384,6 +382,7 @@ def listar_contas(contas: list[Conta]):
 
 
 def depositar(clientes: list[PessoaFisica]):
+    log_operacao_menu("Depositar")
     print("\n--- Depositar ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -424,6 +423,7 @@ def depositar(clientes: list[PessoaFisica]):
 
 
 def sacar(clientes: list[PessoaFisica]):
+    log_operacao_menu("Sacar")
     print("\n--- Sacar ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -461,6 +461,7 @@ def sacar(clientes: list[PessoaFisica]):
     print(f"Saldo atual da conta {conta.numero}: R${conta.saldo:.2f}")
 
 def exibir_extrato(clientes: list[PessoaFisica]):
+    log_operacao_menu("Exibir Extrato")
     print("\n--- Extrato ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -491,6 +492,7 @@ def exibir_extrato(clientes: list[PessoaFisica]):
     print(f"Saldo Atual: R${conta.saldo:.2f}")
 
 def listar_transacoes_por_tipo(clientes: list[PessoaFisica]):
+    log_operacao_menu("Listar Transações por Tipo")
     print("\n--- Listar Transações por Tipo ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -548,12 +550,13 @@ def main():
         elif opcao == "nu":
             cadastrar_usuario(clientes)
         elif opcao == "nc":
-            nova_conta_criada = criar_conta(clientes, contas)
+            criar_conta(clientes, contas)
         elif opcao == "lc":
             listar_contas(contas)
-        elif opcao == "lt": 
+        elif opcao == "lt":
             listar_transacoes_por_tipo(clientes)
         elif opcao == "q":
+            log_operacao_menu("Sair do Sistema")
             print("\nSaindo do sistema. Até mais!")
             break
         else:
