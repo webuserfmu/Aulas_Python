@@ -10,7 +10,7 @@ def get_next_transaction_id():
     return _TRANSACTION_ID
 
 def log_operacao_menu(operacao_nome: str):
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Operação: {operacao_nome}")
+    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}: {operacao_nome}")
 
 def log_transacao(func):
     @wraps(func)
@@ -18,14 +18,11 @@ def log_transacao(func):
         resultado = func(*args, **kwargs)
 
         if isinstance(args[0], Transacao):
-            transacao = args[0]
-            conta = args[1]
-            tipo = type(transacao).__name__
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transação: {tipo} | ID: {transacao.id} | Valor: R${transacao.valor:.2f} | Conta: {conta.numero}")
+            tipo = type(args[0]).__name__
+            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}: {tipo}")
         elif func.__name__ == 'criar_conta' and resultado:
-            nova_conta = resultado
-            cliente = nova_conta.cliente
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transação: Criação de Conta | Conta: {nova_conta.numero} | Cliente: {cliente.nome}")
+            tipo = "Criação de Conta"
+            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}: {tipo}")
         return resultado
     return wrapper
 
@@ -313,7 +310,6 @@ def recuperar_conta_cliente(cliente: Cliente, numero_conta: int) -> Conta | None
     return None
 
 def cadastrar_usuario(clientes: list[PessoaFisica]):
-    log_operacao_menu("Cadastrar Usuário")
     print("\n--- Novo Usuário ---")
     cpf = input("Informe o CPF (somente números): ")
     cliente_existente = filtrar_cliente(cpf, clientes)
@@ -321,7 +317,7 @@ def cadastrar_usuario(clientes: list[PessoaFisica]):
     if cliente_existente:
         print("\n!!! Erro: Já existe um cliente com este CPF!")
         return
-
+    
     nome = input("Informe o nome completo: ")
     data_nascimento = input("Informe a data de nascimento (dd-mm-aaaa): ")
     endereco = input("Informe o endereço (logradouro, nro - bairro - cidade/sigla estado): ")
@@ -329,6 +325,7 @@ def cadastrar_usuario(clientes: list[PessoaFisica]):
     novo_cliente = PessoaFisica(cpf=cpf, nome=nome, data_nascimento=data_nascimento, endereco=endereco)
     clientes.append(novo_cliente)
     print("\n>>> Usuário criado com sucesso!")
+    log_operacao_menu("Cadastrar Usuário")
 
 @log_transacao
 def criar_conta(clientes: list[PessoaFisica], contas: list[Conta]):
@@ -360,7 +357,6 @@ def criar_conta(clientes: list[PessoaFisica], contas: list[Conta]):
 
 
 def listar_contas(contas: list[Conta]):
-    log_operacao_menu("Listar Contas")
     print("\n--- Lista de Contas ---")
     if not contas:
         print("Nenhuma conta cadastrada.")
@@ -378,10 +374,10 @@ def listar_contas(contas: list[Conta]):
             print(f"Limite por Saque: R${conta_original.limite:.2f}")
             print(f"Limite Saques Diários: {conta_original._limite_saques_diarios}")
         print("-" * 30)
+    log_operacao_menu("Listar Contas")
 
 
 def depositar(clientes: list[PessoaFisica]):
-    log_operacao_menu("Depositar")
     print("\n--- Depositar ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -419,10 +415,10 @@ def depositar(clientes: list[PessoaFisica]):
     transacao = Deposito(valor)
     cliente.realizar_transacao(conta, transacao)
     print(f"Saldo atual da conta {conta.numero}: R${conta.saldo:.2f}")
+    log_operacao_menu("Depositar")
 
 
 def sacar(clientes: list[PessoaFisica]):
-    log_operacao_menu("Sacar")
     print("\n--- Sacar ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -458,9 +454,9 @@ def sacar(clientes: list[PessoaFisica]):
     transacao = Saque(valor)
     cliente.realizar_transacao(conta, transacao)
     print(f"Saldo atual da conta {conta.numero}: R${conta.saldo:.2f}")
+    log_operacao_menu("Sacar")
 
 def exibir_extrato(clientes: list[PessoaFisica]):
-    log_operacao_menu("Exibir Extrato")
     print("\n--- Extrato ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -489,9 +485,9 @@ def exibir_extrato(clientes: list[PessoaFisica]):
 
     conta.historico.gerar_relatorio()
     print(f"Saldo Atual: R${conta.saldo:.2f}")
+    log_operacao_menu("Exibir Extrato")
 
 def listar_transacoes_por_tipo(clientes: list[PessoaFisica]):
-    log_operacao_menu("Listar Transações por Tipo")
     print("\n--- Listar Transações por Tipo ---")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -530,6 +526,7 @@ def listar_transacoes_por_tipo(clientes: list[PessoaFisica]):
     if not encontrou_transacao:
         print("Nenhuma transação encontrada para o filtro especificado.")
     print("----------------------------------------------------------")
+    log_operacao_menu("Listar Transações por Tipo")
 
 
 def main():
@@ -555,11 +552,12 @@ def main():
         elif opcao == "lt":
             listar_transacoes_por_tipo(clientes)
         elif opcao == "q":
-            log_operacao_menu("Sair do Sistema")
             print("\nSaindo do sistema. Até mais!")
+            log_operacao_menu("Sair do Sistema")
             break
         else:
             print("\n!!! Operação inválida, por favor selecione novamente a opção desejada.")
+            log_operacao_menu(f"Opção Inválida: {opcao}")
 
         input("\nPressione Enter para continuar...")
 
