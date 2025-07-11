@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod, abstractproperty
 from datetime import datetime
 import os
